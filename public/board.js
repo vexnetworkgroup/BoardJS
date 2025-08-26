@@ -26,6 +26,8 @@ class WhiteboardApp {
         this.lastMousePos = { x: 0, y: 0 };
         this.isPanning = false;
         this.isSpacePressed = false;
+        this.minZoom = 0.1;
+        this.maxZoom = 6;
 
         // --- Tool State ---
         this.currentTool = 'pen'; // 'pen', 'eraser', 'move'
@@ -34,6 +36,15 @@ class WhiteboardApp {
 
         // --- Collaboration ---
         this.remoteCursors = {};
+        this.remoteCursorPositions = {};
+
+        // --- Touch Gesture State ---
+        this.pinchState = {
+            active: false,
+            initialDistance: 0,
+            initialZoom: 1,
+            initialCenterWorld: { x: 0, y: 0 }
+        };
 
         this.init();
     }
@@ -65,9 +76,9 @@ class WhiteboardApp {
         this.canvas.addEventListener('wheel', this.onWheel.bind(this), { passive: false });
         
         // Touch events
-        this.canvas.addEventListener('touchstart', this.onPointerDown.bind(this));
-        this.canvas.addEventListener('touchmove', this.onPointerMove.bind(this));
-        this.canvas.addEventListener('touchend', this.onPointerUp.bind(this));
+        this.canvas.addEventListener('touchstart', this.onPointerDown.bind(this), { passive: false });
+        this.canvas.addEventListener('touchmove', this.onPointerMove.bind(this), { passive: false });
+        this.canvas.addEventListener('touchend', this.onPointerUp.bind(this), { passive: false });
 
         // Toolbar
         document.querySelector('.floating-toolbar').addEventListener('click', (e) => {
@@ -172,6 +183,19 @@ class WhiteboardApp {
     // --- Event Handlers ---
     onPointerDown(e) {
         e.preventDefault();
+        // Multi-touch pinch start
+        if (e.touches && e.touches.length === 2) {
+            const t = this.getTouchInfo(e);
+            this.pinchState.active = true;
+            this.pinchState.initialDistance = t.distance;
+            this.pinchState.initialZoom = this.camera.zoom;
+            this.pinchState.initialCenterWorld = this.screenToWorld(t.center);
+            this.isDrawing = false;
+            this.isErasing = false;
+            this.isPanning = true;
+            this.canvas.style.cursor = 'grabbing';
+            return;
+        }
         const pos = this.getMousePos(e);
         this.lastMousePos = pos;
         
@@ -206,6 +230,28 @@ class WhiteboardApp {
 
     onPointerMove(e) {
         e.preventDefault();
+        // Handle pinch zoom/pan when two fingers
+        if (e.touches && e.touches.length === 2) {
+            const t = this.getTouchInfo(e);
+            if (!this.pinchState.active) {
+                this.pinchState.active = true;
+                this.pinchState.initialDistance = t.distance;
+                this.pinchState.initialZoom = this.camera.zoom;
+                this.pinchState.initialCenterWorld = this.screenToWorld(t.center);
+            }
+            const scale = t.distance / (this.pinchState.initialDistance || 1);
+            let newZoom = this.pinchState.initialZoom * scale;
+            newZoom = Math.max(this.minZoom, Math.min(this.maxZoom, newZoom));
+            this.camera.zoom = newZoom;
+            // Keep the initial world point under the touch center stable
+            this.camera.x = t.center.x - this.pinchState.initialCenterWorld.x * this.camera.zoom;
+            this.camera.y = t.center.y - this.pinchState.initialCenterWorld.y * this.camera.zoom;
+            return;
+        }
+        // If pinch ended
+        if (this.pinchState.active && (!e.touches || e.touches.length < 2)) {
+            this.pinchState.active = false;
+        }
         const pos = this.getMousePos(e);
         const worldPos = this.screenToWorld(pos);
 
@@ -316,6 +362,16 @@ class WhiteboardApp {
         }
 
         this.ctx.restore();
+
+        // Update remote cursor DOM positions to follow camera
+        for (const userId in this.remoteCursorPositions) {
+            const worldPos = this.remoteCursorPositions[userId];
+            const screenPos = this.worldToScreen(worldPos);
+            const el = this.remoteCursors[userId];
+            if (el) {
+                el.style.transform = `translate(${screenPos.x}px, ${screenPos.y}px)`;
+            }
+        }
     }
     
     drawGrid() {
@@ -416,8 +472,20 @@ class WhiteboardApp {
             this.remoteCursors[user.id] = cursorEl;
         }
 
-        const screenPos = this.worldToScreen(pos);
-        cursorEl.style.transform = `translate(${screenPos.x}px, ${screenPos.y}px)`;
+        // Save world position and position will be applied during draw()
+        this.remoteCursorPositions[user.id] = pos;
+    }
+
+    // --- Touch Helpers ---
+    getTouchInfo(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        const t1 = e.touches[0];
+        const t2 = e.touches[1];
+        const p1 = { x: t1.clientX - rect.left, y: t1.clientY - rect.top };
+        const p2 = { x: t2.clientX - rect.left, y: t2.clientY - rect.top };
+        const center = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+        const distance = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+        return { p1, p2, center, distance };
     }
 }
 
