@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>vDraw Board</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div class="floating-toolbar">
+        <button class="tool-btn" data-tool="move" title="Move Tool (V)">✋</button>
+        <button class="tool-btn active" data-tool="pen" title="Pen Tool (P)">✏️</button>
+        <button class="tool-btn" data-tool="eraser" title="Eraser Tool (E)">🧼</button>
+        <div class="tool-separator"></div>
+        <input type="color" id="colorPicker" title="Color" value="#000000">
+        <select id="brushSize" title="Brush Size">
+            <option value="2">2px</option>
+            <option value="5" selected>5px</option>
+            <option value="10">10px</option>
+            <option value="20">20px</option>
+        </select>
+        <div class="tool-separator"></div>
+        <button id="clearBoard" title="Clear Board (Owner only)">🗑️</button>
+    </div>
+
+    <div class="info-panel">
+        <div class="room-info">
+            Room: <strong id="roomId">-</strong>
+            <button id="copyRoomId" title="Copy Room ID">📋</button>
+        </div>
+        <div id="members-panel">
+            <div class="members-header">
+                <span>Members (<span id="userCount">0</span>)</span>
+            </div>
+            <ul id="members-list"></ul>
+        </div>
+    </div>
+    
+    <div id="cursors-container"></div>
+    
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="board.js"></script>
+</body>
+</html>
