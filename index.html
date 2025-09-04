@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Collaborative Drawing Board</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta name="description" content="Real-time collaborative drawing board with public/private rooms, advanced tools, and comprehensive color palette">
+    <meta name="keywords" content="drawing, collaboration, whiteboard, canvas, real-time, public rooms, private rooms">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading" class="loading-screen">
+        <div class="loading-spinner"></div>
+        <p>Loading Drawing Board...</p>
+    </div>
+
+    <!-- Main Application -->
+    <div id="app" class="app-container" style="display: none;">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <h1 class="logo">
+                    <i class="fas fa-palette"></i>
+                    DrawBoard
+                </h1>
+                <div class="room-info">
+                    <span id="roomName" class="room-name">My Room</span>
+                    <span id="roomType" class="room-type public">Public</span>
+                    <span id="onlineCount" class="online-count">
+                        <i class="fas fa-users"></i>
+                        <span>1</span>
+                    </span>
+                </div>
+            </div>
+            <div class="header-center">
+                <div class="tool-group">
+                    <button id="undoBtn" class="tool-btn" title="Undo (Ctrl+Z)">
+                        <i class="fas fa-undo"></i>
+                    </button>
+                    <button id="redoBtn" class="tool-btn" title="Redo (Ctrl+Y)">
+                        <i class="fas fa-redo"></i>
+                    </button>
+                </div>
+                <div class="tool-group">
+                    <button id="clearBtn" class="tool-btn danger" title="Clear Canvas">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                    <button id="saveBtn" class="tool-btn" title="Save Drawing">
+                        <i class="fas fa-download"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="header-right">
+                <button id="shareBtn" class="btn btn-primary">
+                    <i class="fas fa-share"></i>
+                    Share
+                </button>
+                <button id="settingsBtn" class="tool-btn" title="Settings">
+                    <i class="fas fa-cog"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <!-- Drawing Tools -->
+                <div class="tool-panel">
+                    <h3>Tools</h3>
+                    <div class="tool-grid">
+                        <button class="tool-option active" data-tool="brush" title="Brush">
+                            <i class="fas fa-paint-brush"></i>
+                        </button>
+                        <button class="tool-option" data-tool="pencil" title="Pencil">
+                            <i class="fas fa-pencil-alt"></i>
+                        </button>
+                        <button class="tool-option" data-tool="eraser" title="Eraser">
+                            <i class="fas fa-eraser"></i>
+                        </button>
+                        <button class="tool-option" data-tool="line" title="Line">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                        <button class="tool-option" data-tool="rectangle" title="Rectangle">
+                            <i class="far fa-square"></i>
+                        </button>
+                        <button class="tool-option" data-tool="circle" title="Circle">
+                            <i class="far fa-circle"></i>
+                        </button>
+                        <button class="tool-option" data-tool="text" title="Text">
+                            <i class="fas fa-font"></i>
+                        </button>
+                        <button class="tool-option" data-tool="select" title="Select">
+                            <i class="fas fa-mouse-pointer"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Brush Settings -->
+                <div class="settings-panel">
+                    <h3>Brush Settings</h3>
+                    <div class="setting-group">
+                        <label>Size: <span id="brushSizeValue">5</span>px</label>
+                        <input type="range" id="brushSize" min="1" max="50" value="5" class="slider">
+                    </div>
+                    <div class="setting-group">
+                        <label>Opacity: <span id="opacityValue">100</span>%</label>
+                        <input type="range" id="opacity" min="0" max="100" value="100" class="slider">
+                    </div>
+                </div>
+
+                <!-- Color Palette -->
+                <div class="color-panel">
+                    <h3>Colors</h3>
+                    <div class="color-sections">
+                        <div class="color-section">
+                            <h4>Basic Colors</h4>
+                            <div id="basicColors" class="color-grid"></div>
+                        </div>
+                        <div class="color-section">
+                            <h4>Material Colors</h4>
+                            <div id="materialColors" class="color-grid"></div>
+                        </div>
+                        <div class="color-section">
+                            <h4>Pastels</h4>
+                            <div id="pastelColors" class="color-grid"></div>
+                        </div>
+                        <div class="color-section">
+                            <h4>Custom</h4>
+                            <div class="custom-color-controls">
+                                <input type="color" id="colorPicker" value="#000000">
+                                <button id="addCustomColor" class="btn btn-sm">Add</button>
+                            </div>
+                            <div id="customColors" class="color-grid"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Layers Panel -->
+                <div class="layers-panel">
+                    <h3>Layers</h3>
+                    <div class="layers-list" id="layersList">
+                        <div class="layer-item active" data-layer="0">
+                            <span class="layer-name">Layer 1</span>
+                            <div class="layer-controls">
+                                <button class="layer-btn" title="Toggle visibility">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="layer-btn" title="Delete layer">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <button id="addLayer" class="btn btn-sm btn-block">
+                        <i class="fas fa-plus"></i>
+                        Add Layer
+                    </button>
+                </div>
+            </aside>
+
+            <!-- Canvas Container -->
+            <div class="canvas-container">
+                <canvas id="drawingCanvas" width="1200" height="800"></canvas>
+                <div id="canvasOverlay" class="canvas-overlay"></div>
+            </div>
+        </main>
+
+        <!-- Users Panel -->
+        <div class="users-panel" id="usersPanel">
+            <h3>
+                <i class="fas fa-users"></i>
+                Online Users
+            </h3>
+            <div id="usersList" class="users-list"></div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <!-- Room Creation Modal -->
+    <div id="roomModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Create New Room</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Room Name</label>
+                    <input type="text" id="roomNameInput" placeholder="Enter room name">
+                </div>
+                <div class="form-group">
+                    <label>Room Type</label>
+                    <div class="radio-group">
+                        <label class="radio-option">
+                            <input type="radio" name="roomType" value="public" checked>
+                            <span class="radio-custom"></span>
+                            <div class="radio-text">
+                                <strong>Public</strong>
+                                <small>Visible in lobby, anyone can join</small>
+                            </div>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="roomType" value="private">
+                            <span class="radio-custom"></span>
+                            <div class="radio-text">
+                                <strong>Private</strong>
+                                <small>Requires join code or invite link</small>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group" id="passwordGroup" style="display: none;">
+                    <label>Join Code (Optional)</label>
+                    <input type="text" id="joinCodeInput" placeholder="Leave empty for auto-generated">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="cancelRoom" class="btn btn-secondary">Cancel</button>
+                <button id="createRoom" class="btn btn-primary">Create Room</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Join Room Modal -->
+    <div id="joinModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Join Room</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Room Code or URL</label>
+                    <input type="text" id="joinInput" placeholder="Enter room code or paste invite URL">
+                </div>
+                <div class="form-group">
+                    <label>Your Name (Optional)</label>
+                    <input type="text" id="userNameInput" placeholder="Anonymous">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="cancelJoin" class="btn btn-secondary">Cancel</button>
+                <button id="joinRoom" class="btn btn-primary">Join Room</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Share Modal -->
+    <div id="shareModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Share Room</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="share-option">
+                    <label>Invite Link</label>
+                    <div class="input-copy-group">
+                        <input type="text" id="shareUrl" readonly>
+                        <button id="copyUrl" class="btn btn-sm">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="share-option">
+                    <label>Room Code</label>
+                    <div class="input-copy-group">
+                        <input type="text" id="shareCode" readonly>
+                        <button id="copyCode" class="btn btn-sm">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="share-qr">
+                    <div id="qrCode"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Public Lobby -->
+    <div id="lobbyModal" class="modal">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h2>
+                    <i class="fas fa-globe"></i>
+                    Public Rooms
+                </h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="lobby-controls">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="roomSearch" placeholder="Search rooms...">
+                    </div>
+                    <button id="refreshRooms" class="btn btn-secondary">
+                        <i class="fas fa-sync-alt"></i>
+                        Refresh
+                    </button>
+                </div>
+                <div id="publicRoomsList" class="rooms-grid">
+                    <!-- Public rooms will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Landing Page -->
+    <div id="landingPage" class="landing-page">
+        <div class="landing-content">
+            <div class="landing-header">
+                <h1>
+                    <i class="fas fa-palette"></i>
+                    Collaborative Drawing Board
+                </h1>
+                <p>Create, share, and collaborate on drawings in real-time</p>
+            </div>
+            
+            <div class="landing-actions">
+                <button id="createRoomBtn" class="btn btn-primary btn-large">
+                    <i class="fas fa-plus"></i>
+                    Create New Room
+                </button>
+                <button id="joinRoomBtn" class="btn btn-secondary btn-large">
+                    <i class="fas fa-sign-in-alt"></i>
+                    Join Room
+                </button>
+                <button id="browseRoomsBtn" class="btn btn-outline btn-large">
+                    <i class="fas fa-globe"></i>
+                    Browse Public Rooms
+                </button>
+            </div>
+
+            <div class="features">
+                <div class="feature">
+                    <i class="fas fa-users"></i>
+                    <h3>Real-time Collaboration</h3>
+                    <p>Draw together with friends and colleagues in real-time</p>
+                </div>
+                <div class="feature">
+                    <i class="fas fa-palette"></i>
+                    <h3>Rich Drawing Tools</h3>
+                    <p>Complete set of drawing tools with layers and effects</p>
+                </div>
+                <div class="feature">
+                    <i class="fas fa-shield-alt"></i>
+                    <h3>Public & Private Rooms</h3>
+                    <p>Create public rooms or private spaces with join codes</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notifications -->
+    <div id="notifications" class="notifications-container"></div>
+
+    <!-- Scripts -->
+    <script src="js/colors.js"></script>
+    <script src="js/undo-redo.js"></script>
+    <script src="js/drawing.js"></script>
+    <script src="js/rooms.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
